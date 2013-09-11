@@ -3,11 +3,16 @@
 # the one component of Spree.
 source 'https://rubygems.org'
 
-gem 'json'
-gem 'multi_json'
-gem 'mysql2'
-gem 'pg'
-gem 'sqlite3'
+platforms :ruby do
+  gem 'mysql2'
+  gem 'pg'
+  gem 'sqlite3'
+end
+
+platforms :jruby do
+  gem 'jruby-openssl'
+  gem 'activerecord-jdbcsqlite3-adapter'
+end
 
 gem 'coffee-rails', '~> 4.0.0'
 gem 'sass-rails', '~> 4.0.0'
@@ -20,7 +25,7 @@ group :test do
   gem 'launchy'
   gem 'pry'
   gem 'rspec-rails', '~> 2.14.0'
-  gem 'selenium-webdriver', '~> 2.33'
+  gem 'selenium-webdriver', '~> 2.35'
   gem 'simplecov'
   gem 'webmock', '1.8.11'
 end

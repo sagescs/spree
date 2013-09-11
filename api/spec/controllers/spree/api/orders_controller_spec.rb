@@ -168,7 +168,7 @@ module Spree
         address
       end
 
-      it "can update quantities of existing line items" do
+      it "updates quantities of existing line items" do
         api_put :update, :id => order.to_param, :order => {
           :line_items => {
             line_item.id => { :quantity => 10 }
@@ -215,16 +215,34 @@ module Spree
         json_response['errors']['ship_address.firstname'].first.should eq "can't be blank"
       end
 
+      context "order has shipments" do
+        before { order.create_proposed_shipments }
+
+        it "clears out all existing shipments on line item udpate" do
+          previous_shipments = order.shipments
+          api_put :update, :id => order.to_param, :order => {
+            :line_items => {
+              line_item.id => { :quantity => 10 }
+            }
+          }
+          expect(order.reload.shipments).to be_empty
+        end
+      end
+
       context "with a line item" do
-        before do
-          create(:line_item, :order => order)
-          order.reload
+        let(:order_with_line_items) do
+          order = create(:order_with_line_items)
+          create(:adjustment, :adjustable => order)
+          order
         end
 
         it "can empty an order" do
-          api_put :empty, :id => order.to_param
+          order_with_line_items.adjustments.count.should be == 1
+          api_put :empty, :id => order_with_line_items.to_param
           response.status.should == 200
-          order.reload.line_items.should be_empty
+          order_with_line_items.reload
+          order_with_line_items.line_items.should be_empty
+          order_with_line_items.adjustments.should be_empty
         end
 
         it "can list its line items with images" do
@@ -357,3 +375,4 @@ module Spree
     end
   end
 end
+

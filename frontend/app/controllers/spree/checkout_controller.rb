@@ -17,6 +17,8 @@ module Spree
     before_filter :check_authorization
     before_filter :apply_coupon_code
 
+    before_filter :setup_for_current_state
+
     helper 'spree/orders'
 
     rescue_from Spree::Core::GatewayError, :with => :rescue_from_spree_gateway_error
@@ -24,8 +26,6 @@ module Spree
     # Updates the order and advances to the next state (when possible.)
     def update
       if @order.update_attributes(object_params)
-        fire_event('spree.checkout.update')
-
         unless @order.next
           flash[:error] = @order.errors[:base].join("\n")
           redirect_to checkout_state_path(@order.state) and return
@@ -69,7 +69,6 @@ module Spree
           redirect_to checkout_state_path(@order.state) if @order.can_go_to_state?(params[:state]) && !skip_state_validation?
           @order.state = params[:state]
         end
-        setup_for_current_state
       end
 
       def ensure_checkout_allowed
@@ -125,9 +124,14 @@ module Spree
         send(method_name) if respond_to?(method_name, true)
       end
 
+      # Skip setting ship address if order doesn't have a delivery checkout step
+      # to avoid triggering validations on shipping address
       def before_address
         @order.bill_address ||= Address.default
-        @order.ship_address ||= Address.default
+
+        if @order.checkout_steps.include? "delivery"
+          @order.ship_address ||= Address.default
+        end
       end
 
       def before_delivery

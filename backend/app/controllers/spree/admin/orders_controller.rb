@@ -52,13 +52,9 @@ module Spree
       end
 
       def edit
-        @order.shipments.map &:refresh_rates
-        # Transition as far as we can go
-        while @order.next; end
-        # The payment step shows an error of 'No pending payments'
-        # Clearing the errors from the order object will stop this error
-        # appearing on the edit page where we don't want it to.
-        @order.errors.clear
+        unless @order.complete?
+          @order.refresh_shipment_rates
+        end
       end
 
       def update

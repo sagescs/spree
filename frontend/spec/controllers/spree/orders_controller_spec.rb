@@ -21,6 +21,8 @@ describe Spree::OrdersController do
       # Don't care about IP address or created_by being set here
       order.stub(:last_ip_address=)
       order.stub(:created_by=)
+      # Don't care about shipments either as feature specs will cover it
+      order.stub :ensure_updated_shipments
       Spree::Order.stub(:find).with(1).and_return(order)
       controller.stub(:try_spree_current_user => user)
     end
@@ -60,7 +62,7 @@ describe Spree::OrdersController do
         order.stub(:line_items).and_return([])
         order.stub(:line_items=).with([])
         order.stub(:last_ip_address=)
-        Spree::Order.stub(:find_by_id_and_currency).and_return(order)
+        subject.should_receive(:current_order).at_least(:once).and_return(order)
       end
 
       it "should not result in a flash success" do

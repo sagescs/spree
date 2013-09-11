@@ -5,6 +5,11 @@ describe Spree::CheckoutController do
   let(:user) { stub_model(Spree::LegacyUser) }
   let(:order) { FactoryGirl.create(:order_with_totals) }
 
+  let(:address_params) do
+    address = FactoryGirl.build(:address)
+    address.attributes.except("created_at", "updated_at")
+  end
+
   before do
     controller.stub :try_spree_current_user => user
     controller.stub :current_order => order
@@ -78,11 +83,6 @@ describe Spree::CheckoutController do
           order.stub :available_payment_methods => [stub_model(Spree::PaymentMethod)]
           order.stub :ensure_available_shipping_rates => true
           order.line_items << FactoryGirl.create(:line_item)
-        end
-
-        let(:address_params) do
-          address = FactoryGirl.build(:address)
-          address.attributes.except("created_at", "updated_at")
         end
 
         it "should assign order" do
@@ -256,12 +256,10 @@ describe Spree::CheckoutController do
       configure_spree_preferences do |config|
         config.track_inventory_levels = true
       end
-
     end
 
     context "and back orders are not allowed" do
       before do
-        controller.should_receive(:before_payment)
         spree_post :update, { :state => "payment" }
       end
 
@@ -277,7 +275,15 @@ describe Spree::CheckoutController do
 
   context "order doesn't have a delivery step" do
     before do
-      order.stub(:checkout_steps => ["cart", "payment"])
+      order.stub(:checkout_steps => ["cart", "address", "payment"])
+      order.stub state: "address"
+      controller.stub :check_authorization => true
+    end
+
+    it "doesn't set shipping address on the order" do
+      expect(order).to receive(:bill_address)
+      expect(order).to_not receive(:ship_address)
+      spree_post :update
     end
 
     it "doesn't remove unshippable items before payment" do
@@ -288,6 +294,8 @@ describe Spree::CheckoutController do
   end
 
   it "does remove unshippable items before payment" do
+    controller.stub :check_authorization => true
+
     expect {
       spree_post :update, { :state => "payment" }
     }.to change { order.line_items }

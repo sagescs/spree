@@ -28,24 +28,17 @@ module Spree
         # Need to generate an API key for a user due to some backend actions
         # requiring authentication to the Spree API
         def generate_admin_api_key
-          if user = try_spree_current_user
-            if user.spree_api_key.blank?
-              user.generate_spree_api_key!
-            end
+          if (user = try_spree_current_user) && user.spree_api_key.blank?
+            user.generate_spree_api_key!
           end
         end
 
         def check_alerts
           return unless should_check_alerts?
-
           unless session.has_key? :alerts
-            begin
-              session[:alerts] = Spree::Alert.current(request.host)
-              filter_dismissed_alerts
-              Spree::Config.set :last_check_for_spree_alerts => DateTime.now.to_s
-            rescue
-              session[:alerts] = nil
-            end
+            session[:alerts] = Spree::Alert.current(request.host)
+            filter_dismissed_alerts
+            Spree::Config.set :last_check_for_spree_alerts => DateTime.now.to_s
           end
         end
 
